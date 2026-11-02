@@ -1,0 +1,21 @@
+# 로컬 환경 및 비밀 정보
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# 의존성 및 빌드 결과
+node_modules/
+dist/
+build/
+.next/
+coverage/
+__pycache__/
+.venv/
+
+# 로컬 파일 및 업로드 원본
+.DS_Store
+*.log
+tmp/
+uploads/
