@@ -24,14 +24,14 @@ export function Workspace({ userId }: { userId: string }) {
     catch (e) { if (n === request.current) { setError(describeError(e)); setLoaded(true); } }
   }, []);
   useEffect(() => {
-    void refresh();
+    void Promise.resolve().then(refresh);
     const channel = db().channel(`my-groups:${userId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'groups' }, () => void refresh())
       .subscribe(status => { if (status === 'SUBSCRIBED') void refresh(); });
     const focus = () => void refresh();
     window.addEventListener('focus', focus);
     window.addEventListener('online', focus);
-    return () => { request.current++; void db().removeChannel(channel); window.removeEventListener('focus', focus); window.removeEventListener('online', focus); };
+    return () => { void db().removeChannel(channel); window.removeEventListener('focus', focus); window.removeEventListener('online', focus); };
   }, [refresh, userId]);
   async function submit(event: FormEvent<HTMLFormElement>, join: boolean) {
     event.preventDefault();
@@ -39,7 +39,9 @@ export function Workspace({ userId }: { userId: string }) {
     const data = new FormData(form);
     setBusy(true); setError('');
     try {
-      const id = await rpc<string>(join ? 'join_travel_group' : 'create_travel_group', join ? { p_code: field(data, 'code') } : { p_name: field(data, 'name') });
+      const id = join
+        ? await rpc('join_travel_group', { p_code: field(data, 'code') })
+        : await rpc('create_travel_group', { p_name: field(data, 'name') });
       form.reset(); setSelected(id); await refresh();
     } catch (e) { setError(describeError(e)); } finally { setBusy(false); }
   }
@@ -76,7 +78,7 @@ function GroupDetail({ id, userId }: { id: string; userId: string }) {
     catch (e) { if (n === request.current) setLoadError(describeError(e)); }
   }, [id]);
   useEffect(() => {
-    void refresh();
+    void Promise.resolve().then(refresh);
     const channel = db().channel(`group:${id}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'groups', filter: `id=eq.${id}` }, () => void refresh())
       .subscribe(status => {
@@ -85,7 +87,7 @@ function GroupDetail({ id, userId }: { id: string; userId: string }) {
       });
     const focus = () => void refresh();
     window.addEventListener('focus', focus); window.addEventListener('online', focus);
-    return () => { request.current++; void db().removeChannel(channel); window.removeEventListener('focus', focus); window.removeEventListener('online', focus); };
+    return () => { void db().removeChannel(channel); window.removeEventListener('focus', focus); window.removeEventListener('online', focus); };
   }, [id, refresh]);
   async function run(action: () => Promise<void>) {
     if (busy) return;
@@ -115,7 +117,7 @@ function GroupDetail({ id, userId }: { id: string; userId: string }) {
   return <section className="detail">
     <div className="detail-top"><div><p className="eyebrow">OUR JOURNEY</p><h1>{group.name}</h1><p>{group.destination || '여행지 미정'} <span className="muted">/ {group.start_date ? `${group.start_date} — ${group.end_date}` : '일정을 정해보세요'}</span></p></div><div className="sync"><span>{connection}</span><button className="text-button" onClick={() => void refresh()}>새로고침</button></div></div>
     <div className="member-list" aria-label="그룹 구성원">{members.map(m => <span className="member" key={m.user_id}>{m.display_name}{m.user_id === userId ? ' (나)' : ''}</span>)}</div>
-    {owner && <div className="owner-tools"><button className="secondary" disabled={busy} onClick={() => setTripEdit({ ...group })}>여행 설정</button><button className="secondary" disabled={busy} onClick={() => void run(async () => setInvite(await rpc<string>('get_group_invite', { p_group_id: id })))}>초대 코드 보기</button>{invite && <label>여행원에게 공유할 초대 코드<input readOnly value={invite} onFocus={e => e.target.select()}/></label>}</div>}
+    {owner && <div className="owner-tools"><button className="secondary" disabled={busy} onClick={() => setTripEdit({ ...group })}>여행 설정</button><button className="secondary" disabled={busy} onClick={() => void run(async () => setInvite(await rpc('get_group_invite', { p_group_id: id })))}>초대 코드 보기</button>{invite && <label>여행원에게 공유할 초대 코드<input readOnly value={invite} onFocus={e => e.target.select()}/></label>}</div>}
     {tripEdit && <form className="card" onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void run(async () => { await rpc('update_travel_group', { p_group_id: id, p_version: tripEdit.version, p_destination: field(data, 'destination'), p_start: field(data, 'start') || null, p_end: field(data, 'end') || null }); setTripEdit(null); setNotice('여행 정보를 저장했습니다.'); }); }}>
       <h2>여행 설정</h2><fieldset disabled={busy}><label>여행지<input name="destination" maxLength={120} defaultValue={tripEdit.destination}/></label><div className="form-row"><label>시작일<input name="start" type="date" defaultValue={tripEdit.start_date ?? ''}/></label><label>종료일<input name="end" type="date" defaultValue={tripEdit.end_date ?? ''}/></label></div><p className="muted">날짜는 둘 다 입력하거나 둘 다 비워주세요.</p><button>저장</button> <button type="button" className="secondary" onClick={() => setTripEdit(null)}>취소</button></fieldset>
     </form>}

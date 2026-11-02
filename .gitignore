@@ -10,6 +10,7 @@ node_modules/
 dist/
 build/
 .next/
+*.tsbuildinfo
 coverage/
 __pycache__/
 .venv/
@@ -19,5 +20,4 @@ __pycache__/
 *.log
 tmp/
 uploads/
-*.tsbuildinfo
 out/

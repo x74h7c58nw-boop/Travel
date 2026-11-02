@@ -1,14 +1,23 @@
 import { getSupabase } from '../../shared/supabase';
+import type { Database } from '../../shared/auth/database.types';
 import type { Group, Snapshot } from '../../shared/types';
+
+type Functions = Database['public']['Functions'];
+type FunctionName = keyof Functions;
+
 export function db() {
   const client = getSupabase();
   if (!client) throw new Error('Supabase 환경변수를 설정하세요.');
   return client;
 }
-export async function rpc<T>(name: string, args: Record<string, unknown>): Promise<T> {
+
+export async function rpc<Name extends FunctionName>(
+  name: Name,
+  args: Functions[Name]['Args'],
+): Promise<Functions[Name]['Returns']> {
   const { data, error } = await db().rpc(name, args);
   if (error) throw error;
-  return data as T;
+  return data;
 }
 export async function listGroups(): Promise<Group[]> {
   const { data, error } = await db().from('groups').select('*').order('updated_at', { ascending: false });
@@ -16,9 +25,9 @@ export async function listGroups(): Promise<Group[]> {
   return data ?? [];
 }
 export async function readGroup(id: string) {
-  const data = await rpc<Snapshot | null>('get_group_snapshot', { p_group_id: id });
+  const data = await rpc('get_group_snapshot', { p_group_id: id });
   if (!data) throw new Error('그룹을 조회할 수 없습니다. 참여 권한을 확인하세요.');
-  return data;
+  return data as Snapshot;
 }
 export function describeError(error: unknown) {
   const message = typeof error === 'object' && error && 'message' in error ? String(error.message) : String(error);
