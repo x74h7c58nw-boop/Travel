@@ -1,6 +1,6 @@
 # 초기 데이터 모델
 
-아래는 논의를 위한 개념 모델입니다. 실제 테이블과 필드는 기술 스택과 정책을 결정한 뒤 정의합니다.
+아래는 서비스 전체 개념 모델입니다. 인증·사진·앨범 테이블과 접근 정책은 [인증·앨범 구현 및 연동 계약](auth-albums-implementation.md)에 정의합니다.
 
 | 개념 | 역할 | 주요 관계 |
 | --- | --- | --- |
@@ -17,6 +17,15 @@
 | Album | 여행 사진으로 만든 앨범 | 여행에 연결 |
 | AlbumPhoto | 앨범에 포함할 사진과 순서 | 앨범과 사진을 연결 |
 | Post | 앨범 게시와 공개 범위 | 앨범과 게시자에 연결 |
+
+## 사진·앨범 테이블 소유권
+
+- `photos`, `albums`, `album_photos`는 인증·앨범 작업이 소유합니다.
+- 그룹 작업이 제공할 `groups(id)`를 `photos.group_id`, `albums.group_id`가 참조합니다.
+- `group_members(group_id, user_id)` 멤버십으로 그룹 접근을 판정합니다. 그룹 테이블과 해당 권한 정책은 그룹 작업 소유입니다.
+- `photos.uploaded_by`, `albums.created_by`는 Supabase Auth의 `auth.users.id`를 참조합니다.
+- 앨범 사진 연결은 DB 함수에서 사진과 앨범의 `group_id`가 같은지 검증합니다. 순서 0의 사진이 앨범 표지입니다.
+- PostgreSQL RLS와 비공개 Storage 정책이 구성원 범위를 서버에서 강제합니다. UI의 숨김 처리는 권한 검사를 대신하지 않습니다.
 
 ## 정산 규칙 초안
 
