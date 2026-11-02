@@ -1,0 +1,16 @@
+{
+  "name": "travel",
+  "private": true,
+  "workspaces": [
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @travel/web",
+    "build": "npm run build --workspace @travel/web",
+    "typecheck": "npm run typecheck --workspace @travel/web",
+    "test": "npm run test --workspace @travel/web"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
